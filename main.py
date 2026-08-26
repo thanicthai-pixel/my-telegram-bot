@@ -1,58 +1,46 @@
 import random
-import os
-import requests
-from fastapi import FastAPI
 from PIL import Image, ImageDraw, ImageFont
-from telegram import Bot
 
-app = FastAPI()
+# 1. สุ่มตัวเลขใหม่ตามที่ต้องการ
+set1 = f"{random.randint(0, 99):02d}"  # ชุดที่ 1 (บน-ล่าง)
+set2 = f"{random.randint(0, 99):02d}"  # ชุดที่ 2 (บน-ล่าง)
+running_num = f"{random.randint(0, 9)}"  # เลขวิ่ง 1 ตัว
 
-TELEGRAM_TOKEN = "8825722253:AAFIyG1d6US4XOkbsoI55SzkREYRZblNgEI"
-CHAT_ID = "1880260879"
+# 2. เปิดรูป Template
+img = Image.open("ves_template.jpg")
+draw = ImageDraw.Draw(img)
+img_width, img_height = img.size
 
-FONT_PATH = "Sarabun-Bold.ttf"
-if not os.path.exists(FONT_PATH):
-    font_url = "https://github.com/google/fonts/raw/main/ofl/sarabun/Sarabun-Bold.ttf"
-    res = requests.get(font_url)
-    with open(FONT_PATH, "wb") as f:
-        f.write(res.content)
+# 3. กำหนดฟอนต์และขนาด (ปรับขนาดให้ใหญ่และเด่นขึ้น)
+try:
+  # ปรับขนาดตัวเลขชุดบน-ล่างให้เด่น
+  font_main = ImageFont.truetype("arial.ttf", 65)
+  # ฟอนต์สำหรับเลขวิ่ง
+  font_sub = ImageFont.truetype("arial.ttf", 45)
+except:
+  font_main = ImageFont.load_default()
+  font_sub = ImageFont.load_default()
 
-def create_lucky_image():
-    num_top = f"{random.randint(0, 9999):04d}"
-    num_bottom = f"{random.randint(0, 99):02d}"
+# 4. ข้อความที่จะแสดง
+text_top_bot = f"{set1} - {set2}"
+text_run = f"วิ่ง {running_num}"
 
-    if os.path.exists("ves_template.jpg"):
-        img = Image.open("ves_template.jpg").convert("RGB")
-    else:
-        img = Image.new("RGB", (1024, 1024), color=(15, 20, 25))
+# 5. คำนวณตำแหน่งให้อยู่ "กึ่งกลาง" ภาพพอดี (Center Alignment)
+# คำนวณขนาดข้อความชุดหลัก
+bbox1 = draw.textbbox((0, 0), text_top_bot, font=font_main)
+w1 = bbox1[2] - bbox1[0]
+x1 = (img_width - w1) / 2
+y1 = (
+    img_height / 2 - 60
+)  # ปรับความสูงขึ้นลงได้ตรงนี้ (ค่าลบคือเลื่อนขึ้น / บวกคือเลื่อนลง)
 
-    draw = ImageDraw.Draw(img)
-    font_number_big = ImageFont.truetype(FONT_PATH, 90)
-    font_number_sub = ImageFont.truetype(FONT_PATH, 60)
-    
-    dark_green = (20, 60, 40)
-    gold_color = (212, 160, 23)
+# คำนวณขนาดข้อความเลขวิ่ง
+bbox2 = draw.textbbox((0, 0), text_run, font=font_sub)
+w2 = bbox2[2] - bbox2[0]
+x2 = (img_width - w2) / 2
+y2 = y1 + 80  # ระยะห่างระหว่างบรรทัดแรกกับเลขวิ่ง
 
-    draw.text((360, 400), f"{num_top}", font=font_number_big, fill=dark_green)
-    draw.text((440, 530), f"เลขท้าย: {num_bottom}", font=font_number_sub, fill=gold_color)
-
-    image_path = "final_ves_lucky.jpg"
-    img.save(image_path)
-    return image_path
-
-@app.get("/")
-def home():
-    return {"status": "Bot Server Online"}
-
-@app.get("/send-lottery")
-async def send_lottery():
-    image_path = create_lucky_image()
-    bot = Bot(token=TELEGRAM_TOKEN)
-    
-    with open(image_path, "rb") as photo:
-        await bot.send_photo(
-            chat_id=CHAT_ID, 
-            photo=photo, 
-            caption="งวดนี้รวย! ไม่รวยงวดนี้ จะไปรวยงวดไหน!🍀"
-        )
-    return {"message": "Success"}
+# 6. วาดข้อความลงบนภาพ (กำหนดสีให้เด่นชัด เช่น สีเขียวเข้มตัดกับทอง)
+# วาดเงาหรือตัวหนังสือหลัก
+draw.text((x1, y1), text_top_bot, fill="#0b4619", font=font_main)  # สีเขียวเข้ม
+draw.text((x2, y2), text_run, fill="#b8860b", font=font_sub)  # สีทอง
