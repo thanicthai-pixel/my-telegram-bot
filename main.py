@@ -53,6 +53,6 @@ async def send_lottery():
         await bot.send_photo(
             chat_id=CHAT_ID, 
             photo=photo, 
-            caption="🙏🏻 เลขมงคลประจำวัน เปิดรับทรัพย์ รับโชคใหญ่ครับ!"
+            caption="งวดนี้รวย! ไม่รวยงวดนี้ จะไปรวยงวดไหน!🍀"
         )
     return {"message": "Success"}
