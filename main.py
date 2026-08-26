@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 app = FastAPI()
 
-BOT_TOKEN = "8825722253:AAflyG1d6US4XOkbsoI55SzkREYZbINgEI"
+BOT_TOKEN = "8825722253:AAFIyG1d6US4XOkbsoI55SzkREYRZblNgEI"
 CHAT_ID = "1880260879"
 
 @app.get("/")
