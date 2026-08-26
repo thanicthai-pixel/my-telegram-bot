@@ -1,48 +1,71 @@
 import os
 import random
+import requests
+from fastapi import FastAPI
 from PIL import Image, ImageDraw, ImageFont
 
-# 1. สุ่มตัวเลข 2 ตัว 2 ชุด และเลขวิ่ง 1 ตัว
-set1 = f"{random.randint(0, 99):02d}"
-set2 = f"{random.randint(0, 99):02d}"
-running_num = f"{random.randint(0, 9)}"
+# สร้างแอป FastAPI ( Render ต้องการตัวแปร app นี้ครับ )
+app = FastAPI()
 
-# 2. เปิดรูปภาพ Template
-img_path = "ves_template.jpg"
-img = Image.open(img_path)
-draw = ImageDraw.Draw(img)
-img_width, img_height = img.size
+# 🔑 ใส่ BOT_TOKEN และ CHAT_ID ของคุณตรงนี้
+BOT_TOKEN ="8825722253:AAFIyG1d6US4XOkbsoI55SzkREYRZblNgEI"
+CHAT_ID = "1880260879"
 
-# 3. โหลดฟอนต์ (เซฟความปลอดภัยถ้าไม่มีไฟล์ฟอนต์ในเครื่อง)
-font_size_main = 75
-font_size_sub = 50
+@app.get("/")
+def home():
+    return {"status": "Bot is running"}
 
-try:
-  font_main = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size_main)
-  font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size_sub)
-except:
-  font_main = ImageFont.load_default()
-  font_sub = ImageFont.load_default()
+@app.get("/send-lottery")
+def send_lottery():
+    # 1. สุ่มตัวเลข 2 ชุด (บน-ล่าง) และเลขวิ่ง 1 ตัว
+    set1 = f"{random.randint(0, 99):02d}"
+    set2 = f"{random.randint(0, 99):02d}"
+    running_num = f"{random.randint(0, 9)}"
 
-# 4. ข้อความที่จะแสดงผล
-text_main = f"{set1} - {set2}"
-text_sub = f"วิ่ง {running_num}"
+    # 2. เปิดรูปภาพ Template
+    img_path = "ves_template.jpg"
+    img = Image.open(img_path)
+    draw = ImageDraw.Draw(img)
+    img_width, img_height = img.size
 
-# 5. คำนวณตำแหน่งจัดให้อยู่กึ่งกลางภาพ (Center Alignment)
-bbox1 = draw.textbbox((0, 0), text_main, font=font_main)
-w1 = bbox1[2] - bbox1[0]
-x1 = (img_width - w1) / 2
-y1 = (img_height / 2) - 80  # ปรับความสูงบรรทัดแรก
+    # 3. โหลดฟอนต์ระบบ
+    try:
+        font_main = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
+        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
+    except:
+        font_main = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
 
-bbox2 = draw.textbbox((0, 0), text_sub, font=font_sub)
-w2 = bbox2[2] - bbox2[0]
-x2 = (img_width - w2) / 2
-y2 = y1 + 100  # ปรับระยะห่างระหว่างบรรทัด
+    # 4. กำหนดข้อความ
+    text_main = f"{set1} - {set2}"
+    text_sub = f"วิ่ง {running_num}"
 
-# 6. วาดข้อความลงบนภาพ
-draw.text((x1, y1), text_main, fill="#053B18", font=font_main)  # สีเขียวเข้มเด่นๆ
-draw.text((x2, y2), text_sub, fill="#C59B27", font=font_sub)  # สีทองเด่นๆ
+    # 5. จัดวางตำแหน่งให้อยู่กึ่งกลางภาพพอดี
+    bbox1 = draw.textbbox((0, 0), text_main, font=font_main)
+    w1 = bbox1[2] - bbox1[0]
+    x1 = max(0, (img_width - w1) / 2)
+    y1 = max(10, (img_height / 2) - 50)
 
-# 7. เซฟภาพไว้ส่ง
-output_path = "output.jpg"
-img.save(output_path)
+    bbox2 = draw.textbbox((0, 0), text_sub, font=font_sub)
+    w2 = bbox2[2] - bbox2[0]
+    x2 = max(0, (img_width - w2) / 2)
+    y2 = y1 + 70
+
+    # 6. วาดตัวหนังสือบนภาพ (สีเขียวเข้ม และ สีทอง)
+    draw.text((x1, y1), text_main, fill="#053B18", font=font_main)
+    draw.text((x2, y2), text_sub, fill="#C59B27", font=font_sub)
+
+    # 7. บันทึกรูปภาพ
+    output_path = "output.jpg"
+    img.save(output_path)
+
+    # 8. ส่งภาพเข้า Telegram
+    caption = "งวดนี้รวย! ไม่รวยงวดนี้ จะไปรวยงวดไหน!🍀"
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    
+    with open(output_path, "rb") as photo:
+        payload = {"chat_id": CHAT_ID, "caption": caption}
+        files = {"photo": photo}
+        res = requests.post(url, data=payload, files=files)
+
+    return {"status": "success", "telegram_response": res.json()}
